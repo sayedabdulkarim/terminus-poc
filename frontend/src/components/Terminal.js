@@ -14,6 +14,8 @@ const Terminal = () => {
   const terminalRef = useRef(null);
   const xtermRef = useRef(null);
   const fitAddonRef = useRef(null);
+  // Track command input separately from the terminal
+  const commandBufferRef = useRef("");
 
   useEffect(() => {
     // Initialize xterm.js
@@ -39,7 +41,7 @@ const Terminal = () => {
     // Write a welcome message
     xtermRef.current.writeln("Welcome to the terminal!");
     xtermRef.current.writeln('Type "help" to see available commands.');
-    xtermRef.current.write("\r\n$ ");
+    xtermRef.current.write("$ ");
 
     // Sample handler for user input
     xtermRef.current.onKey(({ key, domEvent }) => {
@@ -48,38 +50,39 @@ const Terminal = () => {
 
       if (domEvent.keyCode === 13) {
         // Enter key
-        const line = xtermRef.current._core.buffer.active
-          .getLine(xtermRef.current._core.buffer.active.cursorY)
-          .translateToString();
-
-        const command = line.substring(line.lastIndexOf("$") + 1).trim();
+        // Get command from our buffer instead of terminal buffer
+        const command = commandBufferRef.current.trim();
 
         // Process the command
+        xtermRef.current.writeln(""); // New line after command input
+
         if (command === "clear") {
           xtermRef.current.clear();
         } else if (command === "help") {
-          xtermRef.current.writeln("");
           xtermRef.current.writeln("Available commands:");
           xtermRef.current.writeln("  help    - Show this help message");
           xtermRef.current.writeln("  clear   - Clear the terminal");
           xtermRef.current.writeln("  date    - Show current date and time");
         } else if (command === "date") {
-          xtermRef.current.writeln("");
           xtermRef.current.writeln(new Date().toString());
         } else if (command !== "") {
-          xtermRef.current.writeln("");
           xtermRef.current.writeln(`Command not found: ${command}`);
         }
 
-        xtermRef.current.writeln("");
+        // Reset command buffer
+        commandBufferRef.current = "";
+
+        // Display prompt for next command
         xtermRef.current.write("$ ");
       } else if (domEvent.keyCode === 8) {
         // Backspace
-        // Do not delete the prompt
-        if (xtermRef.current._core.buffer.active.cursorX > 2) {
+        // Only delete if there are characters in our buffer
+        if (commandBufferRef.current.length > 0) {
+          commandBufferRef.current = commandBufferRef.current.slice(0, -1);
           xtermRef.current.write("\b \b");
         }
       } else if (printable) {
+        commandBufferRef.current += key;
         xtermRef.current.write(key);
       }
     });
