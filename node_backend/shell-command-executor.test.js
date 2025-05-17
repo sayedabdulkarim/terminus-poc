@@ -364,4 +364,111 @@ describe("Shell Command Executor", () => {
       expect(result.success).toBe(true);
     });
   });
+  describe("Edge cases", () => {
+    test("should handle empty command", async () => {
+      // Arrange
+      const command = "";
+
+      // Act
+      const promise = executeShellCommand(command);
+
+      // Simulate command execution
+      spawn.mockProcess.emit("close", 0);
+
+      const result = await promise;
+
+      // Assert
+      expect(result).toEqual({
+        command,
+        stdout: "",
+        stderr: "",
+        exitCode: 0,
+        success: true,
+      });
+    });
+
+    test("should handle commands with special characters", async () => {
+      // Arrange
+      const command = "echo 'Special chars: !@#$%^&*()'";
+
+      // Act
+      const promise = executeShellCommand(command);
+
+      // Simulate command execution
+      spawn.mockProcess.stdout.emit(
+        "data",
+        Buffer.from("Special chars: !@#$%^&*()\n")
+      );
+      spawn.mockProcess.emit("close", 0);
+
+      const result = await promise;
+
+      // Assert
+      expect(result.stdout).toBe("Special chars: !@#$%^&*()\n");
+      expect(result.success).toBe(true);
+    });
+
+    test("should handle commands with large output", async () => {
+      // Arrange
+      const command = "yes | head -n 1000";
+
+      // Act
+      const promise = executeShellCommand(command);
+
+      // Simulate large output
+      const largeOutput = "y\n".repeat(1000);
+      spawn.mockProcess.stdout.emit("data", Buffer.from(largeOutput));
+      spawn.mockProcess.emit("close", 0);
+
+      const result = await promise;
+
+      // Assert
+      expect(result.stdout).toBe(largeOutput);
+      expect(result.success).toBe(true);
+    });
+
+    test("should handle commands with no stdout or stderr", async () => {
+      // Arrange
+      const command = "true"; // A command that produces no output
+
+      // Act
+      const promise = executeShellCommand(command);
+
+      // Simulate command execution
+      spawn.mockProcess.emit("close", 0);
+
+      const result = await promise;
+
+      // Assert
+      expect(result).toEqual({
+        command,
+        stdout: "",
+        stderr: "",
+        exitCode: 0,
+        success: true,
+      });
+    });
+
+    test("should handle commands that fail without stderr", async () => {
+      // Arrange
+      const command = "false"; // A command that fails but produces no stderr
+
+      // Act
+      const promise = executeShellCommand(command);
+
+      // Simulate command execution
+      spawn.mockProcess.emit("close", 1);
+
+      const result = await promise;
+
+      // Assert
+      expect(result).toEqual({
+        command,
+        stdout: "",
+        stderr: "",
+        exitCode: 1,
+        success: false,
+      });
+    });
+  });
 });
