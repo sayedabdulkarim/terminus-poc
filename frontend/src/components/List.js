@@ -7,6 +7,16 @@ const ListContainer = styled.div`
   overflow-y: auto;
   background-color: #f5f5f5;
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ListHeader = styled.div`
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
 `;
 
 const ListItem = styled.div`
@@ -14,6 +24,7 @@ const ListItem = styled.div`
   border-bottom: 1px solid #e0e0e0;
   cursor: pointer;
   transition: background-color 0.2s;
+  margin-bottom: 8px;
 
   &:hover {
     background-color: #eeeeee;
@@ -34,6 +45,44 @@ const ItemDescription = styled.p`
   margin: 0;
   font-size: 14px;
   color: #666;
+`;
+
+const ResultContainer = styled.div`
+  margin-top: 10px;
+  padding: 10px;
+  background-color: ${(props) => (props.isError ? "#ffebee" : "#e8f5e9")};
+  border-radius: 4px;
+  border-left: 4px solid ${(props) => (props.isError ? "#f44336" : "#4caf50")};
+`;
+
+const ResultTitle = styled.div`
+  font-weight: bold;
+  margin-bottom: 5px;
+`;
+
+const ResultContent = styled.pre`
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: ${(props) =>
+    props.isError ? "rgba(244, 67, 54, 0.1)" : "rgba(76, 175, 80, 0.1)"};
+  padding: 8px;
+  border-radius: 2px;
+`;
+
+const CommandSection = styled.div`
+  margin-bottom: 20px;
+`;
+
+const Timestamp = styled.div`
+  font-size: 12px;
+  color: #888;
+  margin-top: 5px;
+  text-align: right;
 `;
 
 // Sample data for the list
@@ -100,9 +149,41 @@ const sampleListItems = [
   },
 ];
 
-const List = ({ onItemClick }) => {
+const List = ({ onItemClick, commandResults = [], error = null }) => {
   return (
     <ListContainer>
+      {commandResults.length > 0 && (
+        <CommandSection>
+          <ListHeader>Command Execution Results</ListHeader>
+          {commandResults.map((result) => (
+            <ResultContainer key={result.id} isError={!!result.error}>
+              <ResultTitle>$ {result.command}</ResultTitle>
+              {result.error ? (
+                <ResultContent isError={true}>
+                  Error: {result.error}
+                </ResultContent>
+              ) : (
+                <>
+                  {result.result.success ? (
+                    <ResultContent>
+                      {result.result.stdout ||
+                        "Command executed successfully with no output."}
+                    </ResultContent>
+                  ) : (
+                    <ResultContent isError={true}>
+                      Exit Code: {result.result.exitCode}
+                      {result.result.stderr && `\n${result.result.stderr}`}
+                    </ResultContent>
+                  )}
+                </>
+              )}
+              <Timestamp>{result.timestamp}</Timestamp>
+            </ResultContainer>
+          ))}
+        </CommandSection>
+      )}
+
+      <ListHeader>Available Commands</ListHeader>
       {sampleListItems.map((item) => (
         <ListItem
           key={item.id}

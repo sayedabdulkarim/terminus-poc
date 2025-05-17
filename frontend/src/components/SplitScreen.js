@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import styled from "styled-components";
+import axios from "axios";
 import Terminal from "./Terminal";
 import List from "./List";
 
@@ -23,21 +24,71 @@ const RightPanel = styled.div`
 `;
 
 const SplitScreen = () => {
+  const [commandResults, setCommandResults] = useState([]);
+  const [error, setError] = useState(null);
+
   const handleListItemClick = (item) => {
     console.log("List item clicked:", item);
-    // You can add additional functionality here, such as:
-    // - Sending the command to the terminal
-    // - Showing more details about the command
-    // - Etc.
+    // Extract command from item title (e.g., "Terminal Command: ls" -> "ls")
+    const commandMatch = item.title.match(/Terminal Command: (.+)/);
+    if (commandMatch && commandMatch[1]) {
+      const command = commandMatch[1];
+      executeCommand(command);
+    }
+  };
+
+  const executeCommand = async (command) => {
+    try {
+      setError(null);
+      const response = await axios.post(
+        "http://localhost:5001/api/execute-command",
+        {
+          command,
+        }
+      );
+
+      // Add the new result to the beginning of the array
+      setCommandResults((prevResults) => [
+        {
+          id: Date.now(),
+          command,
+          result: response.data,
+          timestamp: new Date().toLocaleString(),
+        },
+        ...prevResults,
+      ]);
+    } catch (err) {
+      console.error("Error executing command:", err);
+      setError(err.message || "Failed to execute command");
+
+      // Add the error to results as well
+      setCommandResults((prevResults) => [
+        {
+          id: Date.now(),
+          command,
+          error: err.message || "Failed to execute command",
+          timestamp: new Date().toLocaleString(),
+        },
+        ...prevResults,
+      ]);
+    }
+  };
+
+  const handleTerminalCommand = (command) => {
+    executeCommand(command);
   };
 
   return (
     <AppContainer>
       <LeftPanel>
-        <Terminal />
+        <Terminal onExecuteCommand={handleTerminalCommand} />
       </LeftPanel>
       <RightPanel>
-        <List onItemClick={handleListItemClick} />
+        <List
+          onItemClick={handleListItemClick}
+          commandResults={commandResults}
+          error={error}
+        />
       </RightPanel>
     </AppContainer>
   );

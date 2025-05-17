@@ -10,7 +10,7 @@ const TerminalContainer = styled.div`
   background-color: #1e1e1e;
 `;
 
-const Terminal = () => {
+const Terminal = ({ onExecuteCommand }) => {
   const terminalRef = useRef(null);
   const xtermRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -63,10 +63,18 @@ const Terminal = () => {
           xtermRef.current.writeln("  help    - Show this help message");
           xtermRef.current.writeln("  clear   - Clear the terminal");
           xtermRef.current.writeln("  date    - Show current date and time");
+          xtermRef.current.writeln("  Any valid shell command (ls, pwd, etc.)");
         } else if (command === "date") {
           xtermRef.current.writeln(new Date().toString());
         } else if (command !== "") {
-          xtermRef.current.writeln(`Command not found: ${command}`);
+          // Execute the command via the API
+          if (onExecuteCommand) {
+            onExecuteCommand(command);
+            xtermRef.current.writeln(`Executing command: ${command}`);
+            xtermRef.current.writeln("Check the right panel for results.");
+          } else {
+            xtermRef.current.writeln(`Command not found: ${command}`);
+          }
         }
 
         // Reset command buffer
@@ -101,7 +109,7 @@ const Terminal = () => {
         xtermRef.current.dispose();
       }
     };
-  }, []);
+  }, [onExecuteCommand]);
 
   return <TerminalContainer ref={terminalRef} />;
 };
